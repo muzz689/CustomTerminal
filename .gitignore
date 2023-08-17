@@ -1,4 +1,6 @@
 tester/
 tests/
-test-out/
+tests-out/
 tfolder/
+/test-witsshell.sh
+/witsshell
