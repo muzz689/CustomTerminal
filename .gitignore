@@ -4,3 +4,4 @@ tests-out/
 tfolder/
 /test-witsshell.sh
 /witsshell
+.vscode/

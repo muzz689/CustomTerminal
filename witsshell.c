@@ -10,6 +10,7 @@
 
 #define PATH_MAX_LENGTH 1024 // Maximum length for path strings
 
+//One and only Error Handle
 void handleError()
 {
 	char error_message[30] = "An error has occurred\n";
@@ -17,26 +18,47 @@ void handleError()
 	return;
 }
 
-void FormatPath( char  full_path[], char *path, char *input )
+/* Handles Concating
+* Takes in output array , path and input given and concats it
+*/  
+void FormatPath(char full_path[], char *path, char *input)
 {
-	// Concat path and input into full path
-	snprintf(full_path, PATH_MAX_LENGTH, "%s%s", path,input);
+
+	snprintf(full_path, PATH_MAX_LENGTH, "%s%s", path, input);
 	return;
 }
-void handleCommandls(char  full_path[],char *input,char *path)
+/* Handles non-basic commands 
+* Takes in fullpath , input , path
+*/
+void handleCommandls(char full_path[], char *input, char *path)
 {
-	// Check if the file exists and is executable
-	if (access(full_path, X_OK) == 0)
+	// Split the whole input by whitespace
+	char *command = strtok(input, " ");
+	char *args[100]; 					// Assuming a maximum of 100 arguments
+	int argIndex = 0;
+	while (command != NULL)				//Continue spliting
 	{
+		args[argIndex] = command;
+		argIndex++;
+		command = strtok(NULL, " ");
+	}
+	args[argIndex] = NULL; 			  // Last element needs to be null for execv
+
+
+	// To get the exec path with just  /bin/{command}
+	char executable_path[PATH_MAX_LENGTH];
+	FormatPath(executable_path, path, args[0]); 
+
+		// Check if the file exists and is executable
+		if (access(executable_path, X_OK) == 0)
+	{
+
 		// Create a new process to run the command
 		pid_t child_pid = fork();
 		if (child_pid == 0)
 		{
-			// Prepare argument array since execv requires an array of strings ending in NULL
-			char *args[] = {input, NULL};
-			// Execute command
-			execv(full_path, args);
-			// exit(EXIT_SUCCESS);
+
+			execv(executable_path, args);
 		}
 		else if (child_pid > 0)
 		{
@@ -54,6 +76,7 @@ void handleCommandls(char  full_path[],char *input,char *path)
 		handleError();
 		exit(EXIT_FAILURE);
 	}
+
 	return;
 }
 
@@ -86,15 +109,14 @@ int main(int MainArgc, char *MainArgv[])
 				exit(EXIT_SUCCESS);
 			}
 
-			//Non basic commmand
+			// Non basic commmand
 			else
 			{
 				char full_path[PATH_MAX_LENGTH];
 				FormatPath(full_path, path, input);
-				handleCommandls(full_path,input,path);
+				handleCommandls(full_path, input, path);
 				free(input);
 			}
-			
 		}
 		free(input);
 		return (0);
@@ -130,8 +152,8 @@ int main(int MainArgc, char *MainArgv[])
 
 				char full_path[PATH_MAX_LENGTH];
 				FormatPath(full_path, path, input);
-				handleCommandls(full_path,input,path);
-				free(input);
+				handleCommandls(full_path, input, path);
+				// free(input);
 			}
 		}
 
