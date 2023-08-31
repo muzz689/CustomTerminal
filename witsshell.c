@@ -10,7 +10,7 @@
 
 #define PATH_MAX_LENGTH 1024 // Maximum length for path strings
 
-//One and only Error Handle
+// One and only Error Handle
 void handleError()
 {
 	char error_message[30] = "An error has occurred\n";
@@ -19,38 +19,37 @@ void handleError()
 }
 
 /* Handles Concating
-* Takes in output array , path and input given and concats it
-*/  
+ * Takes in output array , path and input given and concats it
+ */
 void FormatPath(char full_path[], char *path, char *input)
 {
 
 	snprintf(full_path, PATH_MAX_LENGTH, "%s%s", path, input);
 	return;
 }
-/* Handles non-basic commands 
-* Takes in fullpath , input , path
-*/
+/* Handles non-basic commands
+ * Takes in fullpath , input , path
+ */
 void handleCommandls(char full_path[], char *input, char *path)
 {
 	// Split the whole input by whitespace
 	char *command = strtok(input, " ");
-	char *args[100]; 					// Assuming a maximum of 100 arguments
+	char *args[100]; // Assuming a maximum of 100 arguments
 	int argIndex = 0;
-	while (command != NULL)				//Continue spliting
+	while (command != NULL) // Continue spliting
 	{
 		args[argIndex] = command;
 		argIndex++;
 		command = strtok(NULL, " ");
 	}
-	args[argIndex] = NULL; 			  // Last element needs to be null for execv
-
+	args[argIndex] = NULL; // Last element needs to be null for execv
 
 	// To get the exec path with just  /bin/{command}
 	char executable_path[PATH_MAX_LENGTH];
-	FormatPath(executable_path, path, args[0]); 
+	FormatPath(executable_path, path, args[0]);
 
-		// Check if the file exists and is executable
-		if (access(executable_path, X_OK) == 0)
+	// Check if the file exists and is executable
+	if (access(executable_path, X_OK) == 0)
 	{
 
 		// Create a new process to run the command
@@ -86,6 +85,7 @@ int main(int MainArgc, char *MainArgv[])
 	char *input = NULL; // Take in input
 	size_t input_size = 0;
 	char *path = "/bin/"; // Set the initial shell path to "/bin/"
+	char *dir = NULL;
 
 	// Batch
 	if (MainArgc == 2)
@@ -108,6 +108,16 @@ int main(int MainArgc, char *MainArgv[])
 			{
 				exit(EXIT_SUCCESS);
 			}
+			//CD command
+			else if ( strncmp(input,"cd",2)==0) //First 2 is cd
+			{
+				dir = input + 3;
+				if(chdir(dir)!=0)	//Fail
+				{
+					handleError();
+				}
+			}
+			
 
 			// Non basic commmand
 			else
@@ -145,6 +155,16 @@ int main(int MainArgc, char *MainArgv[])
 				free(input);
 				exit(EXIT_SUCCESS);
 			}
+			//CD command
+			else if ( strncmp(input,"cd",2)==0) //First 2 is cd
+			{
+				dir = input + 3;
+				if(chdir(dir)!=0)	//Fail
+				{
+					handleError();
+				}
+			}
+			
 
 			// Non Basic Functions
 			else
