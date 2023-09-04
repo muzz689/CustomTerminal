@@ -306,6 +306,7 @@ int main(int MainArgc, char *MainArgv[])
 		if (batch_file == NULL)
 		{
 			// Exit 1
+			handleError();
 			exit(EXIT_FAILURE);
 		}
 
