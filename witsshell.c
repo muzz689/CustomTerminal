@@ -8,10 +8,9 @@
 #include <fcntl.h>
 #include <dirent.h> // Include for directory handling
 
-#define PATH_MAX_LENGTH 1024	// Maximum length for path strings
-#define MAX_PATH_DIRECTORIES 10 // Maximum length for path strings
-// Global variable for path initialize with the default path
-char *path[MAX_PATH_DIRECTORIES] = {"/bin/"};
+#define PATH_MAX_LENGTH 1024				  // Maximum length for path strings
+#define MAX_PATH_DIRECTORIES 10				  // Maximum length for path strings
+char *path[MAX_PATH_DIRECTORIES] = {"/bin/"}; // Global variable for path initialize with the default path
 int path_count = 1;
 
 // One and only Error Handle
@@ -23,7 +22,7 @@ void handleError()
 }
 
 /* Handles Concating
- * Takes in output array , path and input given and concats it
+ * Takes in output array ,  and input given and concats it with executable paths
  */
 void FormatPath(char full_path[], char *input)
 {
@@ -35,16 +34,20 @@ void FormatPath(char full_path[], char *input)
 			return; // Found the executable in one of the directories
 		}
 	}
-	full_path[0] = '\0'; 
+	full_path[0] = '\0';
 	// If not found in any directory, full_path will contain the last directory in the path
 }
 
+
+
 /* Handles non-basic commands
- * Takes in fullpath , input , path
+ * Takes in fullpath , input
  */
 void handleCommandls(char full_path[], char *input)
 {
-	// Split the whole input by whitespace
+	/* Splits the whole input by whitespace into args array
+	 *	Example : (cd tester = args={"cd","tester",NULL})
+	 */
 	char *command = strtok(input, " ");
 	char *args[100]; // Assuming a maximum of 100 arguments
 	int argIndex = 0;
@@ -56,36 +59,93 @@ void handleCommandls(char full_path[], char *input)
 	}
 	args[argIndex] = NULL; // Last element needs to be null for execv
 
+	/* Check for   redirection and outputFile
+	* Loops through args array 
+	* if it finds 1 > contained within an arg, then finds output file after it provided its not null.
+	* if its still in loop and already found redirection meaning either multiple > or multiple outfiles
+	* Sets the multiredirectFlag = True.
+	*/ 
+	bool redirectFlag = false;
+	bool multiredirectFlag = false;
+
+	char outputFile[PATH_MAX_LENGTH] = "";
+	for (int i = 0; args[i] != NULL; i++)
+	{
+
+		
+		if (strcmp(args[i], ">") == 0 && !redirectFlag )
+		{
+			redirectFlag = true;
+			args[i] = NULL;
+			if (args[i + 1] != NULL)
+			{
+				strcpy(outputFile, args[i + 1]);
+
+				i++;
+			}
+		}
+		else if (redirectFlag)
+		{
+			multiredirectFlag = true;
+			
+		}
+		
+	}
+
 	// To get the exec path with just  /bin/{command}
 	char executable_path[PATH_MAX_LENGTH];
 	FormatPath(executable_path, args[0]);
-	
+
 	// Check if the file exists and is executable
 	if (access(executable_path, X_OK) == 0)
 	{
-		
 		// Create a new process to run the command
 		pid_t child_pid = fork();
 		if (child_pid == 0)
 		{
+			// If we Redirecting
+			if (redirectFlag )
+			{	
+				//If 1 outputfile and no multi > or multi files
+				if (strlen(outputFile) > 0 && !multiredirectFlag)
+				{
+					int outputFd = open(outputFile, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+					if (outputFd == -1)
+					{
+						handleError();
+						exit(EXIT_FAILURE);
+					}
+					dup2(outputFd, STDOUT_FILENO);
+					dup2(outputFd, STDERR_FILENO); // Redirect stderr to the same file
+					close(outputFd);
+					execv(executable_path, args);
+				}
+				//  No file or Multi > or Multi file
+				else
 
-			execv(executable_path, args);
-
-			
+				{
+					handleError();
+				}
+			}
+			//Normal execution
+			else
+			{
+				execv(executable_path, args);
+			}
 		}
 		else if (child_pid > 0)
 		{
 			// Parent process
 			wait(NULL); // Wait for the child process to complete
 		}
-		
+
 		else
 		{
 			handleError();
 			exit(EXIT_FAILURE);
 		}
 	}
-	
+
 	else
 	{
 		handleError();
@@ -109,18 +169,12 @@ void updatePath(char **path, char *newPaths[], int newPathsCount)
 
 	// Copy the new paths into the array
 	for (int i = 0; i < newPathsCount; i++)
-	{	
-		// if(strncmp(newPaths[i],"/",1)!=0){
-			// newPaths[i] =  strcat("/",newPaths[i]);
-			
-		// }
-		
+	{
+
 		path[i] = strdup(newPaths[i]);
-		// printf("%s",path[i]);
 	}
 
 	path_count = newPathsCount;
-
 }
 
 int main(int MainArgc, char *MainArgv[])
@@ -178,7 +232,6 @@ int main(int MainArgc, char *MainArgv[])
 				}
 
 				updatePath(path, newPaths, newPathsCount);
-				
 			}
 
 			// Non basic commmand
@@ -247,15 +300,14 @@ int main(int MainArgc, char *MainArgv[])
 			{
 				for (int i = 0; i < path_count; i++)
 				{
-					printf("%s",path[i]);
+					printf("%s", path[i]);
 				}
 				printf("hsb");
 			}
 
-			// Non Basic Functions
+			// Non Basic Commands
 			else
 			{
-
 				char full_path[PATH_MAX_LENGTH];
 				FormatPath(full_path, input);
 				handleCommandls(full_path, input);
