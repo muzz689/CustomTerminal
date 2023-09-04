@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <dirent.h> // Include for directory handling
-#include <ctype.h> // Include for isspace()
+#include <ctype.h>	// Include for isspace()
 
 #define PATH_MAX_LENGTH 1024				  // Maximum length for path strings
 #define MAX_PATH_DIRECTORIES 10				  // Maximum length for path strings
@@ -39,108 +39,107 @@ void FormatPath(char full_path[], char *input)
 	// If not found in any directory, full_path will contain the last directory in the path
 }
 
-
 // Function to skip leading whitespace in a string
-char *skipLeadingWhitespace(char *str) {
-    while (*str != '\0' && isspace((unsigned char)*str)) {
-        str++;
-    }
-    return str;
+char *skipLeadingWhitespace(char *str)
+{
+	while (*str != '\0' && isspace((unsigned char)*str))
+	{
+		str++;
+	}
+	return str;
 }
-
 
 // Function to find the position of the first redirection operator or NULL if not found
-char *findRedirectionOperator(char *str,bool *redirectFlag, bool *multipleRedirect) {
-    *multipleRedirect = false; // Initialize the flag to false
-    *redirectFlag = false; // Initialize the flag to false
-    char *firstRedirect = NULL; // Initialize the pointer to the first redirection operator
-    
-    while (*str != '\0') {
-        if (*str == '>'  ) {
-            if (firstRedirect == NULL) {
-                // Set the pointer to the first redirection operator
-                firstRedirect = str;
-				*redirectFlag = true;
-				
-				
-            } else {
-                // Multiple redirection operators found
-				 *multipleRedirect = true;
-			
-            }
-        }
+char *findRedirectionOperator(char *str, bool *redirectFlag, bool *multipleRedirect)
+{
+	*multipleRedirect = false;	// Initialize the flag to false
+	*redirectFlag = false;		// Initialize the flag to false
+	char *firstRedirect = NULL; // Initialize the pointer to the first redirection operator
 
-        str++;
-    }
-    
-    return firstRedirect; // Return the pointer to the first redirection operator
+	while (*str != '\0')
+	{
+		if (*str == '>')
+		{
+			if (firstRedirect == NULL)
+			{
+				// Set the pointer to the first redirection operator
+				firstRedirect = str;
+				*redirectFlag = true;
+			}
+			else
+			{
+				// Multiple redirection operators found
+				*multipleRedirect = true;
+			}
+		}
+
+		str++;
+	}
+
+	return firstRedirect; // Return the pointer to the first redirection operator
 }
 
-
-
-char * CheckRedirection(char *input,bool *redirectFlag ,bool *multiredirectFlag, char **outputFile)
+char *CheckRedirection(char *input, bool *redirectFlag, bool *multiredirectFlag, char **outputFile)
 {
 
 	// Find the position of the first redirection operator
-    char *redirect = findRedirectionOperator(input,redirectFlag,multiredirectFlag); // >outputfile part
-	
+	char *redirect = findRedirectionOperator(input, redirectFlag, multiredirectFlag); // >outputfile part
 
 	// Initialize variables to store the command and output file
-    char *command = NULL;
-    // char *outputFile = NULL;
+	char *command = NULL;
+	// char *outputFile = NULL;
 
-    if (redirect != NULL) {
-        // If redirection operator found, split the input into command and output file
-        *redirect = '\0'; // Null-terminate the command part
-		
-        command = input;
-        *outputFile = skipLeadingWhitespace(redirect + 1); // outputfile part
-		
-		//TO ENSURE WE DONT HAVE MULTIPLE OUTPUT FILES
-		if (strstr(*outputFile, " ") != NULL) 
+	if (redirect != NULL)
+	{
+		// If redirection operator found, split the input into command and output file
+		*redirect = '\0'; // Null-terminate the command part
+
+		command = input;
+		*outputFile = skipLeadingWhitespace(redirect + 1); // outputfile part
+
+		// TO ENSURE WE DONT HAVE MULTIPLE OUTPUT FILES
+		if (strstr(*outputFile, " ") != NULL)
 		{
-        *multiredirectFlag = true;
-    	}
+			*multiredirectFlag = true;
+		}
 
 		// if(strstr)
-        
-        // Remove trailing whitespace from the command and output file
-        char *end = command + strlen(command) - 1;
-        while (end > command && isspace((unsigned char)*end)) {
-            *end = '\0';
-            end--;
-        }
-        end = *outputFile + strlen(*outputFile) - 1;
-        while (end > *outputFile && isspace((unsigned char)*end)) {
-            *end = '\0';
-            end--;
-        }
 
-    } 
+		// Remove trailing whitespace from the command and output file
+		char *end = command + strlen(command) - 1;
+		while (end > command && isspace((unsigned char)*end))
+		{
+			*end = '\0';
+			end--;
+		}
+		end = *outputFile + strlen(*outputFile) - 1;
+		while (end > *outputFile && isspace((unsigned char)*end))
+		{
+			*end = '\0';
+			end--;
+		}
+	}
 	else
 	{
-        // If no redirection operator is found, treat the entire input as the command
-        command = input;
-    }
+		// If no redirection operator is found, treat the entire input as the command
+		command = input;
+	}
 
 	// // Count the number of space characters in the outputFile string
-    // int spaceCount = 0;
-    // char *outputFilePtr = *outputFile;
-    // while (*outputFilePtr != '\0') {
-    //     if (*outputFilePtr == ' ') {
-    //         spaceCount++;
-    //     }
-    //     outputFilePtr++;
-    // }
+	// int spaceCount = 0;
+	// char *outputFilePtr = *outputFile;
+	// while (*outputFilePtr != '\0') {
+	//     if (*outputFilePtr == ' ') {
+	//         spaceCount++;
+	//     }
+	//     outputFilePtr++;
+	// }
 
-    // // If there are more than one space characters, it means there are multiple output file specifications
-    // if (spaceCount > 1) {
-    //     *multiredirectFlag = true;
-    // }
+	// // If there are more than one space characters, it means there are multiple output file specifications
+	// if (spaceCount > 1) {
+	//     *multiredirectFlag = true;
+	// }
 
-	
-
-	
 	return command;
 }
 
@@ -155,9 +154,9 @@ void handleCommandls(char full_path[], char *input)
 	char *outputFile = NULL;
 
 	// Trim leading and trailing whitespace
-    input = skipLeadingWhitespace(input);
+	input = skipLeadingWhitespace(input);
 
-	input = CheckRedirection(input,&redirectFlag,&multiredirectFlag,&outputFile);
+	input = CheckRedirection(input, &redirectFlag, &multiredirectFlag, &outputFile);
 	/* Splits the whole input by whitespace into args array
 	 *	Example : (cd tester = args={"cd","tester",NULL})
 	 */
@@ -173,18 +172,15 @@ void handleCommandls(char full_path[], char *input)
 	args[argIndex] = NULL; // Last element needs to be null for execv
 
 	/* Check for   redirection and outputFile
-	* Loops through args array 
-	* if it finds 1 > contained within an arg, then finds output file after it provided its not null.
-	* if its still in loop and already found redirection meaning either multiple > or multiple outfiles
-	* Sets the multiredirectFlag = True.
-	*/ 
-
-
+	 * Loops through args array
+	 * if it finds 1 > contained within an arg, then finds output file after it provided its not null.
+	 * if its still in loop and already found redirection meaning either multiple > or multiple outfiles
+	 * Sets the multiredirectFlag = True.
+	 */
 
 	// for (int i = 0; args[i] != NULL; i++)
 	// {
 
-		
 	// 	if (strcmp(args[i], ">") == 0 && !redirectFlag )
 	// 	{
 	// 		redirectFlag = true;
@@ -199,9 +195,9 @@ void handleCommandls(char full_path[], char *input)
 	// 	else if (redirectFlag)
 	// 	{
 	// 		multiredirectFlag = true;
-			
+
 	// 	}
-		
+
 	// }
 
 	// To get the exec path with just  /bin/{command}
@@ -216,15 +212,15 @@ void handleCommandls(char full_path[], char *input)
 		if (child_pid == 0)
 		{
 			// If we Redirecting
-			if (redirectFlag )
+			if (redirectFlag)
 
-			{	
+			{
 				// printf("awe %d \n", multiredirectFlag);
-				
-				//If 1 outputfile and no multi > or multi files
-				if (outputFile!= NULL && !multiredirectFlag)
+
+				// If 1 outputfile and no multi > or multi files
+				if (outputFile != NULL && !multiredirectFlag)
 				{
-					
+
 					int outputFd = open(outputFile, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 					if (outputFd == -1)
 					{
@@ -243,7 +239,7 @@ void handleCommandls(char full_path[], char *input)
 					handleError();
 				}
 			}
-			//Normal execution
+			// Normal execution
 			else
 			{
 				execv(executable_path, args);
@@ -361,6 +357,14 @@ int main(int MainArgc, char *MainArgv[])
 		free(input);
 		return (0);
 	}
+
+	// Check if there are additional arguments (i.e., more than one file)
+	else if (MainArgc > 2)
+	{
+		handleError();
+		exit(EXIT_FAILURE);
+	}
+
 	// Interactive
 	else
 	{
