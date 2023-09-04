@@ -48,6 +48,36 @@ char *skipLeadingWhitespace(char *str)
 	}
 	return str;
 }
+// Function to skip leading and trailing whitespace in a string
+char *skipWhitespace(char *str)
+{
+    char *start, *end;
+
+    // Skip leading whitespace
+    while (isspace((unsigned char)*str)) {
+        str++;
+    }
+
+    // Check for an empty string
+    if (*str == '\0') {
+        return str;
+    }
+
+    // Find the end of the string
+    end = str + strlen(str) - 1;
+
+    // Skip trailing whitespace by moving the end pointer backwards
+    while (end > str && isspace((unsigned char)*end)) {
+        end--;
+    }
+
+    // Null-terminate the string after the trailing whitespace
+    *(end + 1) = '\0';
+
+    return str;
+}
+
+
 
 // Function to find the position of the first redirection operator or NULL if not found
 char *findRedirectionOperator(char *str, bool *redirectFlag, bool *multipleRedirect)
@@ -156,6 +186,8 @@ void handleCommandls(char full_path[], char *input)
 	// Trim leading and trailing whitespace
 	input = skipLeadingWhitespace(input);
 
+	
+
 	input = CheckRedirection(input, &redirectFlag, &multiredirectFlag, &outputFile);
 	/* Splits the whole input by whitespace into args array
 	 *	Example : (cd tester = args={"cd","tester",NULL})
@@ -215,7 +247,6 @@ void handleCommandls(char full_path[], char *input)
 			if (redirectFlag)
 
 			{
-				// printf("awe %d \n", multiredirectFlag);
 
 				// If 1 outputfile and no multi > or multi files
 				if (outputFile != NULL && !multiredirectFlag)
@@ -313,9 +344,15 @@ int main(int MainArgc, char *MainArgv[])
 		while (getline(&input, &input_size, batch_file) != -1)
 		{
 			// Remove the newline character
-			input[strcspn(input, "\n")] = '\0';
+			// input[strcspn(input, "\t\n\r\f\v")] = '\0';
+			input = strtok(input, "\n");
+			input = skipWhitespace(input);
+			// Check if the line is empty
+			if (strlen(input) == 0)
+			{
+				continue; // Skip empty lines
+			}
 
-			// Exit 0
 			if (strcmp(input, "exit") == 0)
 			{
 				exit(EXIT_SUCCESS);
@@ -382,7 +419,14 @@ int main(int MainArgc, char *MainArgv[])
 			}
 
 			// Remove the newline character and assinging it null value
-			input[strcspn(input, "\n")] = '\0'; // this means null
+			// input[strcspn(input, "\n")] = '\0'; // this means null
+			input = strtok(input, "\n");
+			input = skipWhitespace(input);
+			// Check if the line is empty
+			if (strlen(input) == 0)
+			{
+				continue; // Skip empty lines
+			}
 
 			// Exit 0 command
 			if (strcmp(input, "exit") == 0)
