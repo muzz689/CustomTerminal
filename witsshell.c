@@ -390,34 +390,43 @@ void handleCommandls(char full_path[], char *input,bool runParallelFlag)
 
 void updatePath(char **path, char *newPaths[], int newPathsCount)
 {
-	// Fistly  Clear the old paths
-	for (int i = 0; i < path_count; i++)
-	{
-		path[i] = NULL;
-	}
+    // Firstly, clear the old paths
+    for (int i = 0; i < path_count; i++)
+    {
+        // free(path[i]);
+        path[i] = NULL;
+    }
 
-	// Copy the new paths into the array
-	for (int i = 0; i < newPathsCount; i++)
-	{
-		// Check if the path has a trailing slash, and if not, add one
+    // Copy the new paths into the array
+    for (int i = 0; i < newPathsCount; i++)
+    {
         int pathLen = strlen(newPaths[i]);
-        if (pathLen > 0 && newPaths[i][pathLen - 1] != '/')
-        {	
-			
-            // Append a slash to the path
-            newPaths[i][pathLen] = '/';
-            newPaths[i][pathLen + 1] = '\0';
-			// printf("awe this is new paths :%s\n",newPaths[i]);
-			
-			
+        char *str = newPaths[i];
+
+        // Check if the path has a trailing slash, and if not, add one
+        if (str[pathLen - 1] != '/')
+        {
+            // Allocate memory for the new path with a '/' added
+            path[i] = malloc(pathLen + 2);  // +2 for the '/' and null terminator
+            if (path[i] == NULL)
+            {
+                // Handle memory allocation error here
+                exit(EXIT_FAILURE);
+            }
+
+            strcpy(path[i], str);         // Copy the original string
+            strcat(path[i], "/");         // Add '/'
         }
+        else
+        {
+            // No modification needed, just copy the original path
+            path[i] = strdup(str);
+        }
+    }
 
-		path[i] = strdup(newPaths[i]);
-		
-	}
-
-	path_count = newPathsCount;
+    path_count = newPathsCount;
 }
+
 /* Handles running in parallel
 * Split input by &
 * For every command Format path and handleCommand
@@ -639,6 +648,12 @@ int main(int MainArgc, char *MainArgv[])
 			
 		}
 		free(input);
+
+	for (int i = 0; i < path_count; i++)
+	{
+		free(path[i]);
+		path[i] = NULL;
+	}
 		
 
 		return (0);
