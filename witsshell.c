@@ -31,6 +31,7 @@ void FormatPath(char full_path[], char *input)
 	for (int i = 0; i < path_count; i++)
 	{
 		snprintf(full_path, PATH_MAX_LENGTH, "%s%s", path[i], input);
+		// printf("this is full path : %s \n" ,full_path);
 		if (access(full_path, X_OK) == 0)
 		{
 			return; // Found the executable in one of the directories
@@ -93,8 +94,11 @@ char *findRedirectionOperator(char *str, bool *redirectFlag, bool *multipleRedir
 {
 	*multipleRedirect = false;	// Initialize the flag to false
 	*redirectFlag = false;		// Initialize the flag to false
+	// int spaceCount = 0; 
 	char *firstRedirect = NULL; // Initialize the pointer to the first redirection operator
-
+	// str = skipWhitespace(str);
+	// str = skipLeadingWhitespace(str);
+	// printf("awe this is str : %s \n ",str);
 	while (*str != '\0')
 	{
 		if (*str == '>')
@@ -112,10 +116,13 @@ char *findRedirectionOperator(char *str, bool *redirectFlag, bool *multipleRedir
 			}
 		}
 
+
 		str++;
 	}
 
+
 	return firstRedirect; // Return the pointer to the first redirection operator
+	
 }
 
 /*Handles processing of  Redirection
@@ -129,7 +136,8 @@ char *CheckRedirection(char *input, bool *redirectFlag, bool *multiredirectFlag,
 
 	// Find the position of the first redirection operator
 	char *redirect = findRedirectionOperator(input, redirectFlag, multiredirectFlag); // >outputfile part
-
+	// / printf("awe this is redirect : %d \n",redirectFlag);
+	
 	// Initialize variables to store the command and output file
 	char *command = NULL;
 	// char *outputFile = NULL;
@@ -142,11 +150,26 @@ char *CheckRedirection(char *input, bool *redirectFlag, bool *multiredirectFlag,
 		command = input;
 		*outputFile = skipLeadingWhitespace(redirect + 1); // outputfile part
 
-		// TO ENSURE WE DONT HAVE MULTIPLE OUTPUT FILES
-		if (strstr(*outputFile, " ") != NULL)
+		// To handle multiple output
+		char *cmd = strtok(*outputFile, " ");
+		int argIndex = 0;
+		while (cmd != NULL) // Continue spliting
 		{
-			*multiredirectFlag = true;
+			// printf("%s \n",cmd);
+			argIndex++;
+			if(argIndex > 1){
+				*multiredirectFlag = true;
+			}
+			cmd = strtok(NULL, " ");
 		}
+		// args[argIndex] = NULL; // Last element needs to be null for execv
+		// printf("Value of outputFile: %s\n", *outputFile);
+		// TO ENSURE WE DONT HAVE MULTIPLE OUTPUT FILES
+		// if (strstr(*outputFile, " ") != NULL)
+		// {
+		// 	*multiredirectFlag = true;
+		// }
+		// printf("awe this is multi : %d \n",*multiredirectFlag);
 
 		// if(strstr)
 
@@ -178,19 +201,19 @@ char *CheckRedirection(char *input, bool *redirectFlag, bool *multiredirectFlag,
  */
 void CommandExecute(char executable_path[], char *args[], bool redirectFlag, bool multiredirectFlag, char *outputFile)
 {
-
+	
 	// Check if the file exists and is executable
 	if (access(executable_path, X_OK) == 0)
 	{
 		// Create a new process to run the command
 		pid_t child_pid = fork();
 		if (child_pid == 0)
-		{
+		{			
 			// If we Redirecting
 			if (redirectFlag)
 
 			{
-
+				
 				// If 1 outputfile and no multi > or multi files
 				if (outputFile != NULL && !multiredirectFlag)
 				{
@@ -239,14 +262,81 @@ void CommandExecute(char executable_path[], char *args[], bool redirectFlag, boo
 	}
 	return;
 }
+/*Executes command in parallel
+ * Execute redirection or normal execution depending on redirect Flag using execv
+ */
+void CommandExecuteParallel(char executable_path[], char *args[], bool redirectFlag, bool multiredirectFlag, char *outputFile)
+{
+	// printf("Value of execpath: %s\n", executable_path);
+	
+	// Check if the file exists and is executable
+	if (access(executable_path, X_OK) == 0)
+	{	
+		// Create a new process to run the command
+		pid_t child_pid = fork();
+		if (child_pid == 0)
+		{
+			
+			// If we Redirecting
+			if (redirectFlag)
+
+			{
+				
+				
+				// If 1 outputfile and no multi > or multi files
+				if (outputFile != NULL && !multiredirectFlag)
+				{
+					
+					int outputFd = open(outputFile, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+					if (outputFd == -1)
+					{	
+						
+						handleError();
+						exit(EXIT_FAILURE);
+					}
+					dup2(outputFd, STDOUT_FILENO);
+					dup2(outputFd, STDERR_FILENO); // Redirect stderr to the same file
+					close(outputFd);
+					execv(executable_path, args);
+				}
+				//  No file or Multi > or Multi file
+				else
+
+				{
+					handleError();
+				}
+			}
+			// Normal execution
+			else
+			{
+				execv(executable_path, args);
+			}
+			exit(EXIT_SUCCESS);
+		}
+		// else if (child_pid < 0)
+		// {
+		// 	handleError();
+			
+		// }
+
+		
+	}
+
+	else
+	{
+		handleError();
+		// exit(EXIT_FAILURE);
+	}
+	return;
+}
 
 /* Handles non-basic commands
- * Takes in fullpath , input
+ * Takes in fullpath , input , runparallel flag
  * Checks for redirection
  * Split  input by " "
- * Execute the commands
+ * Execute the command based on runParallel
  */
-void handleCommandls(char full_path[], char *input)
+void handleCommandls(char full_path[], char *input,bool runParallelFlag)
 {
 	// Variable for redirection
 	bool redirectFlag = false;
@@ -275,11 +365,22 @@ void handleCommandls(char full_path[], char *input)
 
 	// To get the exec path eg : /bin/ls
 	char executable_path[PATH_MAX_LENGTH];
+	// printf(" arg: %s\n", args[0]);
 	FormatPath(executable_path, args[0]);
 
+	// printf("awe this is redirect : %d \n",redirectFlag);
+	// printf("awe this is multi : %d \n",multiredirectFlag);
+	// printf("awe this is multi : %s \n",multiredirectFlag);
 	// Execute command
-	CommandExecute(executable_path, args, redirectFlag, multiredirectFlag, outputFile);
+	
+	if(runParallelFlag){
+		CommandExecuteParallel(executable_path, args, redirectFlag, multiredirectFlag, outputFile);
+	}
+	else{
+		CommandExecute(executable_path, args, redirectFlag, multiredirectFlag, outputFile);
+	}
 
+	
 	return;
 }
 
@@ -298,11 +399,65 @@ void updatePath(char **path, char *newPaths[], int newPathsCount)
 	// Copy the new paths into the array
 	for (int i = 0; i < newPathsCount; i++)
 	{
+		// Check if the path has a trailing slash, and if not, add one
+        int pathLen = strlen(newPaths[i]);
+        if (pathLen > 0 && newPaths[i][pathLen - 1] != '/')
+        {	
+			
+            // Append a slash to the path
+            newPaths[i][pathLen] = '/';
+            newPaths[i][pathLen + 1] = '\0';
+			// printf("awe this is new paths :%s\n",newPaths[i]);
+			
+			
+        }
 
 		path[i] = strdup(newPaths[i]);
+		
 	}
 
 	path_count = newPathsCount;
+}
+/* Handles running in parallel
+* Split input by &
+* For every command Format path and handleCommand
+*/
+// For & to run in parallel
+void runParallel(char *input)
+{
+
+	char *commands[100];
+	int commandIndex = 0;
+
+	// Split input based on &
+	char *command = strtok(input, "&");
+	while (command != NULL)
+	{
+		// printf("this is command :%s \n",command);
+		commands[commandIndex] = command;
+		commandIndex++;
+		command = strtok(NULL, "&");
+	}
+	commands[commandIndex] = NULL;
+
+	
+	
+    
+
+	// Create child processes and execute each command in parallel
+	for (int i = 0; i < commandIndex; i++)
+	{
+		char full_path[PATH_MAX_LENGTH];
+		FormatPath(full_path, commands[i]);
+		handleCommandls(full_path, commands[i],true);
+		
+	}
+
+	// Parent process waits for all child processes to complete
+    for (int j = 0; j < commandIndex; j++) {
+        wait(NULL);
+    }
+	
 }
 
 // MAIN FUNCTION
@@ -331,7 +486,7 @@ int main(int MainArgc, char *MainArgv[])
 		{
 			// Remove the newline character
 			// input[strcspn(input, "\t\n\r\f\v")] = '\0';
-			input = strtok(input, "\n");
+			// input = strtok(input, "\n");
 			input = skipWhitespace(input);
 			// Check if the line is empty
 			if (strlen(input) == 0)
@@ -360,14 +515,23 @@ int main(int MainArgc, char *MainArgv[])
 
 				// Tokenize the paths and add to array
 				char *token = strtok(input + 5, " ");
-
+				
 				while (token != NULL && newPathsCount < MAX_PATH_DIRECTORIES)
 				{
-					newPaths[newPathsCount++] = token;
+					newPaths[newPathsCount] = token;
+					newPathsCount++;
+					
 					token = strtok(NULL, " ");
 				}
 
 				updatePath(path, newPaths, newPathsCount);
+			}
+
+			// Non basic commmand Check for the "&" operator and run commands in parallel
+			else if (strchr(input, '&') != NULL)
+			{
+				runParallel(input);
+
 			}
 
 			// Non basic commmand Single
@@ -375,7 +539,7 @@ int main(int MainArgc, char *MainArgv[])
 			{
 				char full_path[PATH_MAX_LENGTH];
 				FormatPath(full_path, input);
-				handleCommandls(full_path, input);
+				handleCommandls(full_path, input,false);
 			}
 		}
 		free(input);
@@ -406,7 +570,6 @@ int main(int MainArgc, char *MainArgv[])
 
 			// Remove the newline character and assinging it null value
 			// input[strcspn(input, "\n")] = '\0'; // this means null
-			input = strtok(input, "\n");
 			input = skipWhitespace(input);
 			// Check if the line is empty
 			if (strlen(input) == 0)
@@ -417,7 +580,7 @@ int main(int MainArgc, char *MainArgv[])
 			// Exit 0 command
 			if (strcmp(input, "exit") == 0)
 			{
-				free(input);
+				// free(input);
 				exit(EXIT_SUCCESS);
 			}
 			// CD command
@@ -437,11 +600,14 @@ int main(int MainArgc, char *MainArgv[])
 				char *newPaths[MAX_PATH_DIRECTORIES];
 
 				// Tokenize the paths and add to array
-				char *token = strtok(input + 5, " ");
+				char *token = strtok(input + 5 , " ");
 
 				while (token != NULL && newPathsCount < MAX_PATH_DIRECTORIES)
 				{
-					newPaths[newPathsCount++] = token;
+					printf("awe this is  token :%s\n",token);
+					newPaths[newPathsCount] = token;
+					newPathsCount++;
+					// newPathsCount++;
 					token = strtok(NULL, " ");
 				}
 
@@ -455,18 +621,25 @@ int main(int MainArgc, char *MainArgv[])
 				}
 				printf("hsb");
 			}
+			// Non basic commmand Check for the "&" operator and run commands in parallel
+			else if (strchr(input, '&') != NULL)
+			{
+				runParallel(input);
+
+			}
 
 			// Non Basic Commands
 			else
 			{
 				char full_path[PATH_MAX_LENGTH];
 				FormatPath(full_path, input);
-				handleCommandls(full_path, input);
+				handleCommandls(full_path, input,false);
 				// free(input);
 			}
+			
 		}
-
 		free(input);
+		
 
 		return (0);
 	}
