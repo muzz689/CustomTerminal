@@ -14,7 +14,8 @@
 char *path[MAX_PATH_DIRECTORIES] = {"/bin/"}; // Global variable for path initialize with the default path
 int path_count = 1;
 
-// One and only Error Handle
+/* Handles outputing of all Errors
+ */
 void handleError()
 {
 	char error_message[30] = "An error has occurred\n";
@@ -22,8 +23,8 @@ void handleError()
 	return;
 }
 
-/* Handles Concating
- * Takes in output array ,  and input given and concats it with executable paths
+/* Handles Concatanation
+ *Concat input with path and place it into fullpath
  */
 void FormatPath(char full_path[], char *input)
 {
@@ -39,7 +40,8 @@ void FormatPath(char full_path[], char *input)
 	// If not found in any directory, full_path will contain the last directory in the path
 }
 
-// Function to skip leading whitespace in a string
+/* Handles removing of leading whitespace in a strinf
+ */
 char *skipLeadingWhitespace(char *str)
 {
 	while (*str != '\0' && isspace((unsigned char)*str))
@@ -48,38 +50,45 @@ char *skipLeadingWhitespace(char *str)
 	}
 	return str;
 }
-// Function to skip leading and trailing whitespace in a string
+
+/* Handles removing leading+ trailing of whitespace in a string
+ */
 char *skipWhitespace(char *str)
 {
-    char *start, *end;
+	char *start, *end;
 
-    // Skip leading whitespace
-    while (isspace((unsigned char)*str)) {
-        str++;
-    }
+	// Skip leading whitespace
+	while (isspace((unsigned char)*str))
+	{
+		str++;
+	}
 
-    // Check for an empty string
-    if (*str == '\0') {
-        return str;
-    }
+	// Check for an empty string
+	if (*str == '\0')
+	{
+		return str;
+	}
 
-    // Find the end of the string
-    end = str + strlen(str) - 1;
+	// Find the end of the string
+	end = str + strlen(str) - 1;
 
-    // Skip trailing whitespace by moving the end pointer backwards
-    while (end > str && isspace((unsigned char)*end)) {
-        end--;
-    }
+	// Skip trailing whitespace by moving the end pointer backwards
+	while (end > str && isspace((unsigned char)*end))
+	{
+		end--;
+	}
 
-    // Null-terminate the string after the trailing whitespace
-    *(end + 1) = '\0';
+	// Null-terminate the string after the trailing whitespace
+	*(end + 1) = '\0';
 
-    return str;
+	return str;
 }
 
-
-
-// Function to find the position of the first redirection operator or NULL if not found
+/* Handles finding the position of >
+ *Find > position
+ *Check for multiple >
+ *Returns Position or NUll if not found
+ */
 char *findRedirectionOperator(char *str, bool *redirectFlag, bool *multipleRedirect)
 {
 	*multipleRedirect = false;	// Initialize the flag to false
@@ -109,6 +118,12 @@ char *findRedirectionOperator(char *str, bool *redirectFlag, bool *multipleRedir
 	return firstRedirect; // Return the pointer to the first redirection operator
 }
 
+/*Handles processing of  Redirection
+ *Finds redirection Operator (>)
+ *Checks for multiple output files
+ *Removes Trailing Whitespace  from command and outputFiles
+ *Returns the command
+ */
 char *CheckRedirection(char *input, bool *redirectFlag, bool *multiredirectFlag, char **outputFile)
 {
 
@@ -155,86 +170,14 @@ char *CheckRedirection(char *input, bool *redirectFlag, bool *multiredirectFlag,
 		command = input;
 	}
 
-	// // Count the number of space characters in the outputFile string
-	// int spaceCount = 0;
-	// char *outputFilePtr = *outputFile;
-	// while (*outputFilePtr != '\0') {
-	//     if (*outputFilePtr == ' ') {
-	//         spaceCount++;
-	//     }
-	//     outputFilePtr++;
-	// }
-
-	// // If there are more than one space characters, it means there are multiple output file specifications
-	// if (spaceCount > 1) {
-	//     *multiredirectFlag = true;
-	// }
-
 	return command;
 }
 
-/* Handles non-basic commands
- * Takes in fullpath , input
+/*Executes command
+ * Execute redirection or normal execution depending on redirect Flag using execv
  */
-void handleCommandls(char full_path[], char *input)
+void CommandExecute(char executable_path[], char *args[], bool redirectFlag, bool multiredirectFlag, char *outputFile)
 {
-	bool redirectFlag = false;
-	bool multiredirectFlag = false;
-	// char outputFile[PATH_MAX_LENGTH] = "";
-	char *outputFile = NULL;
-
-	// Trim leading and trailing whitespace
-	input = skipLeadingWhitespace(input);
-
-	
-
-	input = CheckRedirection(input, &redirectFlag, &multiredirectFlag, &outputFile);
-	/* Splits the whole input by whitespace into args array
-	 *	Example : (cd tester = args={"cd","tester",NULL})
-	 */
-	char *command = strtok(input, " ");
-	char *args[100]; // Assuming a maximum of 100 arguments
-	int argIndex = 0;
-	while (command != NULL) // Continue spliting
-	{
-		args[argIndex] = command;
-		argIndex++;
-		command = strtok(NULL, " ");
-	}
-	args[argIndex] = NULL; // Last element needs to be null for execv
-
-	/* Check for   redirection and outputFile
-	 * Loops through args array
-	 * if it finds 1 > contained within an arg, then finds output file after it provided its not null.
-	 * if its still in loop and already found redirection meaning either multiple > or multiple outfiles
-	 * Sets the multiredirectFlag = True.
-	 */
-
-	// for (int i = 0; args[i] != NULL; i++)
-	// {
-
-	// 	if (strcmp(args[i], ">") == 0 && !redirectFlag )
-	// 	{
-	// 		redirectFlag = true;
-	// 		args[i] = NULL;
-	// 		if (args[i + 1] != NULL)
-	// 		{
-	// 			strcpy(outputFile, args[i + 1]);
-
-	// 			i++;
-	// 		}
-	// 	}
-	// 	else if (redirectFlag)
-	// 	{
-	// 		multiredirectFlag = true;
-
-	// 	}
-
-	// }
-
-	// To get the exec path with just  /bin/{command}
-	char executable_path[PATH_MAX_LENGTH];
-	FormatPath(executable_path, args[0]);
 
 	// Check if the file exists and is executable
 	if (access(executable_path, X_OK) == 0)
@@ -294,6 +237,48 @@ void handleCommandls(char full_path[], char *input)
 		handleError();
 		// exit(EXIT_FAILURE);
 	}
+	return;
+}
+
+/* Handles non-basic commands
+ * Takes in fullpath , input
+ * Checks for redirection
+ * Split  input by " "
+ * Execute the commands
+ */
+void handleCommandls(char full_path[], char *input)
+{
+	// Variable for redirection
+	bool redirectFlag = false;
+	bool multiredirectFlag = false;
+	char *outputFile = NULL;
+
+	// Trim leading and trailing whitespace
+	input = skipLeadingWhitespace(input);
+
+	// Check Redirection
+	input = CheckRedirection(input, &redirectFlag, &multiredirectFlag, &outputFile);
+
+	/* Splits the whole input by whitespace into args array
+	 *	Example : (ls tester = args={"ls","tester",NULL})
+	 */
+	char *command = strtok(input, " ");
+	char *args[100]; // Assuming a maximum of 100 arguments
+	int argIndex = 0;
+	while (command != NULL) // Continue spliting
+	{
+		args[argIndex] = command;
+		argIndex++;
+		command = strtok(NULL, " ");
+	}
+	args[argIndex] = NULL; // Last element needs to be null for execv
+
+	// To get the exec path eg : /bin/ls
+	char executable_path[PATH_MAX_LENGTH];
+	FormatPath(executable_path, args[0]);
+
+	// Execute command
+	CommandExecute(executable_path, args, redirectFlag, multiredirectFlag, outputFile);
 
 	return;
 }
@@ -320,6 +305,7 @@ void updatePath(char **path, char *newPaths[], int newPathsCount)
 	path_count = newPathsCount;
 }
 
+// MAIN FUNCTION
 int main(int MainArgc, char *MainArgv[])
 {
 
@@ -384,7 +370,7 @@ int main(int MainArgc, char *MainArgv[])
 				updatePath(path, newPaths, newPathsCount);
 			}
 
-			// Non basic commmand
+			// Non basic commmand Single
 			else
 			{
 				char full_path[PATH_MAX_LENGTH];
